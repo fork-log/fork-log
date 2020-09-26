@@ -1,0 +1,40 @@
+name: Release Experimental
+
+on:
+  - pull_request
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node:
+          - 12
+          - x
+    name: CI Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - run: yarn install
+      - run: yarn ci
+  release:
+    name: Release Experimental
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # yarn set version issue
+      - uses: actions/setup-node@v1
+      - run: yarn install
+      - run: yarn build
+      # GPR
+      - run: yarn config set npmPublishRegistry 'https://npm.pkg.github.com/'
+      - shell: pwsh
+        env:
+          GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
+        run: yarn config set npmAuthToken "$env:GPR_TOKEN"
+      - run: yarn version -i 0.0.0-${{ github.sha }}
+      - run: yarn npm publish
+      # NPM
